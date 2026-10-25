@@ -132,8 +132,12 @@ captureBtn.addEventListener("click", () => {
 
 fileInput.addEventListener("change", event => {
   const file = event.target.files[0];
+
   if (file) {
     setSelectedImage(file);
+  } else {
+    selectedFile = null;
+    analyzeBtn.disabled = true;
   }
 });
 
