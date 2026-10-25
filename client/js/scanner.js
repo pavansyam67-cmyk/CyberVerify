@@ -168,7 +168,7 @@ if (analyzeBtn) {
 
     try {
     const response = await fetch(
-  `${API_BASE_URL}/api/verification/analyze`,
+API_BASE_URL + "/api/verification/history"
   {
     method: "POST",
     body: formData
