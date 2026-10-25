@@ -5,26 +5,17 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="description" content="CyberVerify product authenticity awareness prototype">
-
   <title>CyberVerify | Product Authenticity Awareness</title>
 
-<<<<<<< HEAD
-  <link rel="icon" href="data:,">
-
-=======
-  <!-- Favicon fix -->
+  <!-- Favicon -->
   <link rel="icon" href="data:,">
 
   <!-- Fonts -->
->>>>>>> d5ab987 (Fix GitHub Pages asset paths)
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 
-<<<<<<< HEAD
-=======
-  <!-- CSS -->
->>>>>>> d5ab987 (Fix GitHub Pages asset paths)
+  <!-- Stylesheet: relative path for GitHub Pages -->
   <link rel="stylesheet" href="./css/style.css">
 </head>
 
@@ -36,11 +27,7 @@
         <span>Cyber<span>Verify</span></span>
       </a>
 
-<<<<<<< HEAD
-      <button class="menu-btn" id="menuBtn" type="button" aria-label="Open navigation">☰</button>
-=======
       <button type="button" class="menu-btn" id="menuBtn" aria-label="Open navigation">☰</button>
->>>>>>> d5ab987 (Fix GitHub Pages asset paths)
 
       <nav id="nav">
         <a href="#home">Home</a>
@@ -54,10 +41,12 @@
   </header>
 
   <main>
+    <!-- HOME -->
     <section class="hero" id="home">
       <div class="container hero-grid">
         <div class="hero-content">
           <div class="eyebrow"><span class="pulse"></span> PRODUCT SAFETY AWARENESS</div>
+
           <h1>Check <span>Before</span> You Buy.</h1>
 
           <p>
@@ -110,6 +99,7 @@
       </div>
     </section>
 
+    <!-- PRODUCT SCANNER -->
     <section class="scanner-section section" id="scanner">
       <div class="container">
         <div class="section-heading">
@@ -143,13 +133,13 @@
             </div>
 
             <div class="scanner-buttons">
-<<<<<<< HEAD
-              <button class="btn btn-primary" id="startCameraBtn" type="button">Start Camera</button>
-              <button class="btn btn-secondary" id="captureBtn" type="button" disabled>Capture Photo</button>
-=======
-              <button type="button" class="btn btn-primary" id="startCameraBtn">Start Camera</button>
-              <button type="button" class="btn btn-secondary" id="captureBtn" disabled>Capture Photo</button>
->>>>>>> d5ab987 (Fix GitHub Pages asset paths)
+              <button type="button" class="btn btn-primary" id="startCameraBtn">
+                Start Camera
+              </button>
+
+              <button type="button" class="btn btn-secondary" id="captureBtn" disabled>
+                Capture Photo
+              </button>
 
               <label class="btn btn-secondary upload-btn">
                 Upload Product Image
@@ -157,11 +147,7 @@
               </label>
             </div>
 
-<<<<<<< HEAD
-            <button class="analyze-btn" id="analyzeBtn" type="button" disabled>
-=======
             <button type="button" class="analyze-btn" id="analyzeBtn" disabled>
->>>>>>> d5ab987 (Fix GitHub Pages asset paths)
               Analyze Product <span>→</span>
             </button>
 
@@ -211,6 +197,7 @@
       </div>
     </section>
 
+    <!-- RESULTS -->
     <section class="results-section section" id="results">
       <div class="container">
         <div class="section-heading">
@@ -232,19 +219,28 @@
 
           <div class="score-grid">
             <div class="score-item">
-              <div><span>Brand Logo</span><strong id="brandScore">--%</strong></div>
+              <div>
+                <span>Brand Logo</span>
+                <strong id="brandScore">--%</strong>
+              </div>
               <div class="progress"><i id="brandBar"></i></div>
               <small id="brandText">Waiting for analysis</small>
             </div>
 
             <div class="score-item">
-              <div><span>Packaging / Design</span><strong id="packagingScore">--%</strong></div>
+              <div>
+                <span>Packaging / Design</span>
+                <strong id="packagingScore">--%</strong>
+              </div>
               <div class="progress"><i id="packagingBar"></i></div>
               <small id="packagingText">Waiting for analysis</small>
             </div>
 
             <div class="score-item">
-              <div><span>Product Label</span><strong id="labelScore">--%</strong></div>
+              <div>
+                <span>Product Label</span>
+                <strong id="labelScore">--%</strong>
+              </div>
               <div class="progress"><i id="labelBar"></i></div>
               <small id="labelText">Waiting for analysis</small>
             </div>
@@ -260,6 +256,7 @@
       </div>
     </section>
 
+    <!-- FEATURES -->
     <section class="features section" id="features">
       <div class="container">
         <div class="section-heading center">
@@ -296,6 +293,7 @@
       </div>
     </section>
 
+    <!-- HOW IT WORKS -->
     <section class="how section" id="how">
       <div class="container">
         <div class="section-heading">
@@ -331,6 +329,7 @@
       </div>
     </section>
 
+    <!-- HISTORY -->
     <section class="history section" id="history">
       <div class="container">
         <div class="section-heading">
@@ -345,6 +344,7 @@
       </div>
     </section>
 
+    <!-- ABOUT -->
     <section class="about section" id="about">
       <div class="container about-grid">
         <div>
@@ -368,6 +368,7 @@
     </section>
   </main>
 
+  <!-- FOOTER -->
   <footer>
     <div class="container footer-grid">
       <div>
@@ -391,13 +392,7 @@
 
   <div class="toast" id="toast"></div>
 
-<<<<<<< HEAD
-  <script src="./js/scanner.js"></script>
-</body>
-</html>
-```
-=======
-  <!-- JavaScript -->
+  <!-- JavaScript: relative path for GitHub Pages -->
   <script src="./js/scanner.js"></script>
 </body>
 </html>
