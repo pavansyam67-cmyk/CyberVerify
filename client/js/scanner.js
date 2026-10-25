@@ -1,3 +1,6 @@
+```javascript
+const API_BASE_URL = "https://cyberverify-backend.onrender.com";
+
 const camera = document.getElementById("camera");
 const canvas = document.getElementById("canvas");
 const imagePreview = document.getElementById("imagePreview");
@@ -39,8 +42,7 @@ function setSelectedImage(file) {
   }
 
   selectedFile = file;
-  const url = URL.createObjectURL(file);
-  imagePreview.src = url;
+  imagePreview.src = URL.createObjectURL(file);
 
   cameraBox.classList.remove("active");
   cameraBox.classList.add("has-image");
@@ -52,6 +54,7 @@ function setSelectedImage(file) {
     stream = null;
   }
 
+  startCameraBtn.textContent = "Start Camera";
   captureBtn.disabled = true;
 }
 
@@ -81,7 +84,9 @@ startCameraBtn.addEventListener("click", async () => {
     analyzeBtn.disabled = true;
   } catch (error) {
     console.error(error);
-    showToast("Camera access was blocked. Please allow camera permission or upload an image.");
+    showToast(
+      "Camera access was blocked. Please allow camera permission or upload an image."
+    );
   }
 });
 
@@ -93,6 +98,7 @@ captureBtn.addEventListener("click", () => {
 
   canvas.width = camera.videoWidth;
   canvas.height = camera.videoHeight;
+
   const context = canvas.getContext("2d");
   context.drawImage(camera, 0, 0, canvas.width, canvas.height);
 
@@ -102,7 +108,10 @@ captureBtn.addEventListener("click", () => {
       return;
     }
 
-    selectedFile = new File([blob], "camera-product.jpg", { type: "image/jpeg" });
+    selectedFile = new File([blob], "camera-product.jpg", {
+      type: "image/jpeg"
+    });
+
     imagePreview.src = URL.createObjectURL(blob);
 
     cameraBox.classList.remove("active");
@@ -118,12 +127,14 @@ captureBtn.addEventListener("click", () => {
 
     startCameraBtn.textContent = "Start Camera";
     showToast("Product photo captured.");
-  }, "image/jpeg", .92);
+  }, "image/jpeg", 0.92);
 });
 
 fileInput.addEventListener("change", event => {
   const file = event.target.files[0];
-  setSelectedImage(file);
+  if (file) {
+    setSelectedImage(file);
+  }
 });
 
 analyzeBtn.addEventListener("click", async () => {
@@ -139,10 +150,13 @@ analyzeBtn.addEventListener("click", async () => {
   analyzeBtn.innerHTML = "Analyzing...";
 
   try {
-    const response = await fetch("/api/verification/analyze", {
-      method: "POST",
-      body: formData
-    });
+    const response = await fetch(
+      `${API_BASE_URL}/api/verification/analyze`,
+      {
+        method: "POST",
+        body: formData
+      }
+    );
 
     const data = await response.json();
 
@@ -151,10 +165,10 @@ analyzeBtn.addEventListener("click", async () => {
     }
 
     displayResult(data.verification);
-    loadHistory();
+    await loadHistory();
 
     resultsSection.classList.add("show");
-    document.getElementById("results").scrollIntoView({ behavior: "smooth" });
+    resultsSection.scrollIntoView({ behavior: "smooth" });
     showToast("Prototype verification completed.");
   } catch (error) {
     console.error(error);
@@ -181,7 +195,8 @@ function displayResult(record) {
   updateScore("packaging", record.packagingScore, "Consistent appearance");
   updateScore("label", record.labelScore, "Consistent appearance");
 
-  document.getElementById("recommendationText").textContent = record.recommendation;
+  document.getElementById("recommendationText").textContent =
+    record.recommendation;
 
   if (record.result === "Likely Genuine") {
     resultIcon.textContent = "✓";
@@ -196,74 +211,4 @@ function displayResult(record) {
 }
 
 function updateScore(type, value, text) {
-  const scoreElement = document.getElementById(`${type}Score`);
-  const barElement = document.getElementById(`${type}Bar`);
-  const textElement = document.getElementById(`${type}Text`);
-
-  scoreElement.textContent = `${value}%`;
-  textElement.textContent = text;
-  setTimeout(() => {
-    barElement.style.width = `${value}%`;
-  }, 50);
-}
-
-async function loadHistory() {
-  const list = document.getElementById("historyList");
-
-  try {
-    const response = await fetch("/api/verification/history");
-    const records = await response.json();
-
-    if (!records.length) {
-      list.innerHTML = '<div class="empty-history">No verification records yet.</div>';
-      return;
-    }
-
-    list.innerHTML = records.map(record => {
-      const date = new Date(record.createdAt).toLocaleString();
-      return `
-        <div class="history-item">
-          <img src="${record.imagePath}" alt="Verified product">
-          <div>
-            <h4>${escapeHtml(record.result)}</h4>
-            <p>${date} · Brand ${record.brandLogoScore}% · Packaging ${record.packagingScore}% · Label ${record.labelScore}%</p>
-          </div>
-          <div>
-            <div class="history-score">${record.overallScore}%</div>
-            <button class="delete-btn" onclick="deleteRecord('${record._id}')">Delete</button>
-          </div>
-        </div>
-      `;
-    }).join("");
-  } catch (error) {
-    list.innerHTML = '<div class="empty-history">Unable to load database history.</div>';
-  }
-}
-
-async function deleteRecord(id) {
-  if (!confirm("Delete this verification record?")) return;
-
-  try {
-    const response = await fetch(`/api/verification/${id}`, { method: "DELETE" });
-
-    if (!response.ok) {
-      throw new Error("Delete failed.");
-    }
-
-    loadHistory();
-    showToast("Verification record deleted.");
-  } catch (error) {
-    showToast("Unable to delete record.");
-  }
-}
-
-function escapeHtml(value) {
-  return String(value)
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#039;");
-}
-
-loadHistory();
+  const
