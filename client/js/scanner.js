@@ -167,13 +167,13 @@ if (analyzeBtn) {
     analyzeBtn.textContent = "Analyzing...";
 
     try {
-      const response = await fetch(
-        `${API_BASE_URL}/api/verification/analyze`,
-        {
-          method: "POST",
-          body: formData
-        }
-      );
+    const response = await fetch(
+  `${API_BASE_URL}/api/verification/analyze`,
+  {
+    method: "POST",
+    body: formData
+  }
+);
 
       const data = await response.json();
 
