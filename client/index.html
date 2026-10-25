@@ -1,3 +1,4 @@
+```html
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -5,10 +6,13 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="description" content="CyberVerify product authenticity awareness prototype">
   <title>CyberVerify | Product Authenticity Awareness</title>
+
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/css/style.css">
+
+  <!-- Updated relative path for GitHub Pages -->
+  <link rel="stylesheet" href="./css/style.css">
 </head>
 <body>
   <header class="site-header">
@@ -114,15 +118,16 @@
             </div>
 
             <div class="scanner-buttons">
-              <button class="btn btn-primary" id="startCameraBtn">Start Camera</button>
-              <button class="btn btn-secondary" id="captureBtn" disabled>Capture Photo</button>
+              <button class="btn btn-primary" id="startCameraBtn" type="button">Start Camera</button>
+              <button class="btn btn-secondary" id="captureBtn" type="button" disabled>Capture Photo</button>
+
               <label class="btn btn-secondary upload-btn">
                 Upload Product Image
                 <input type="file" id="fileInput" accept="image/*">
               </label>
             </div>
 
-            <button class="analyze-btn" id="analyzeBtn" disabled>
+            <button class="analyze-btn" id="analyzeBtn" type="button" disabled>
               Analyze Product <span>→</span>
             </button>
 
@@ -315,6 +320,9 @@
   </footer>
 
   <div class="toast" id="toast"></div>
-  <script src="/js/scanner.js"></script>
+
+  <!-- Updated relative path for GitHub Pages -->
+  <script src="./js/scanner.js"></script>
 </body>
 </html>
+```
