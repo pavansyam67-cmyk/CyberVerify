@@ -1,4 +1,3 @@
-```javascript
 const API_BASE_URL = "https://cyberverify-backend.onrender.com";
 
 const camera = document.getElementById("camera");
