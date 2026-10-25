@@ -21,10 +21,14 @@ let stream = null;
 let selectedFile = null;
 
 if (menuBtn && nav) {
-  menuBtn.addEventListener("click", () => nav.classList.toggle("open"));
+  menuBtn.addEventListener("click", function () {
+    nav.classList.toggle("open");
+  });
 
-  document.querySelectorAll("nav a").forEach(a => {
-    a.addEventListener("click", () => nav.classList.remove("open"));
+  document.querySelectorAll("nav a").forEach(function (a) {
+    a.addEventListener("click", function () {
+      nav.classList.remove("open");
+    });
   });
 }
 
@@ -36,7 +40,10 @@ function showToast(message) {
 
   toast.textContent = message;
   toast.classList.add("show");
-  setTimeout(() => toast.classList.remove("show"), 3200);
+
+  setTimeout(function () {
+    toast.classList.remove("show");
+  }, 3200);
 }
 
 function setSelectedImage(file) {
@@ -50,12 +57,19 @@ function setSelectedImage(file) {
 
   cameraBox.classList.remove("active");
   cameraBox.classList.add("has-image");
+
   analyzeBtn.disabled = false;
   cameraStatus.textContent = "Image ready";
 
   if (stream) {
-    stream.getTracks().forEach(track => track.stop());
+    stream.getTracks().forEach(function (track) {
+      track.stop();
+    });
     stream = null;
+  }
+
+  if (camera) {
+    camera.srcObject = null;
   }
 
   startCameraBtn.textContent = "Start Camera";
@@ -63,7 +77,7 @@ function setSelectedImage(file) {
 }
 
 if (fileInput) {
-  fileInput.addEventListener("change", event => {
+  fileInput.addEventListener("change", function (event) {
     const file = event.target.files[0];
 
     if (file) {
@@ -76,10 +90,13 @@ if (fileInput) {
 }
 
 if (startCameraBtn) {
-  startCameraBtn.addEventListener("click", async () => {
+  startCameraBtn.addEventListener("click", async function () {
     try {
       if (stream) {
-        stream.getTracks().forEach(track => track.stop());
+        stream.getTracks().forEach(function (track) {
+          track.stop();
+        });
+
         stream = null;
         camera.srcObject = null;
         cameraBox.classList.remove("active");
@@ -90,7 +107,11 @@ if (startCameraBtn) {
       }
 
       stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: { ideal: "environment" } },
+        video: {
+          facingMode: {
+            ideal: "environment"
+          }
+        },
         audio: false
       });
 
@@ -112,7 +133,7 @@ if (startCameraBtn) {
 }
 
 if (captureBtn) {
-  captureBtn.addEventListener("click", () => {
+  captureBtn.addEventListener("click", function () {
     if (!stream || !camera.videoWidth) {
       showToast("Start the camera first.");
       return;
@@ -124,7 +145,7 @@ if (captureBtn) {
     const context = canvas.getContext("2d");
     context.drawImage(camera, 0, 0, canvas.width, canvas.height);
 
-    canvas.toBlob(blob => {
+    canvas.toBlob(function (blob) {
       if (!blob) {
         showToast("Unable to capture the image.");
         return;
@@ -135,26 +156,31 @@ if (captureBtn) {
       });
 
       imagePreview.src = URL.createObjectURL(blob);
+
       cameraBox.classList.remove("active");
       cameraBox.classList.add("has-image");
+
       analyzeBtn.disabled = false;
       captureBtn.disabled = true;
       cameraStatus.textContent = "Photo captured";
 
       if (stream) {
-        stream.getTracks().forEach(track => track.stop());
+        stream.getTracks().forEach(function (track) {
+          track.stop();
+        });
         stream = null;
       }
 
       camera.srcObject = null;
       startCameraBtn.textContent = "Start Camera";
+
       showToast("Product photo captured.");
     }, "image/jpeg", 0.92);
   });
 }
 
 if (analyzeBtn) {
-  analyzeBtn.addEventListener("click", async () => {
+  analyzeBtn.addEventListener("click", async function () {
     if (!selectedFile) {
       showToast("Capture or upload a product image first.");
       return;
@@ -167,13 +193,13 @@ if (analyzeBtn) {
     analyzeBtn.textContent = "Analyzing...";
 
     try {
-    const response = await fetch(
-API_BASE_URL + "/api/verification/history"
-  {
-    method: "POST",
-    body: formData
-  }
-);
+      const response = await fetch(
+        API_BASE_URL + "/api/verification/analyze",
+        {
+          method: "POST",
+          body: formData
+        }
+      );
 
       const data = await response.json();
 
@@ -185,7 +211,10 @@ API_BASE_URL + "/api/verification/history"
       await loadHistory();
 
       resultsSection.classList.add("show");
-      resultsSection.scrollIntoView({ behavior: "smooth" });
+      resultsSection.scrollIntoView({
+        behavior: "smooth"
+      });
+
       showToast("Prototype verification completed.");
     } catch (error) {
       console.error("Analysis error:", error);
@@ -206,45 +235,61 @@ function displayResult(record) {
   const resultTitle = document.getElementById("resultTitle");
   const resultDescription = document.getElementById("resultDescription");
   const resultIcon = document.getElementById("resultIcon");
+  const overallScore = document.getElementById("overallScore");
+  const recommendationText = document.getElementById("recommendationText");
 
-  resultTitle.textContent = record.result || "Result unavailable";
-  resultDescription.textContent =
-    "This is an initial image-based awareness result, not absolute proof of authenticity.";
+  if (resultTitle) {
+    resultTitle.textContent = record.result || "Result unavailable";
+  }
 
-  document.getElementById("overallScore").innerHTML =
-    `${record.overallScore ?? 0}<small>/100</small>`;
+  if (resultDescription) {
+    resultDescription.textContent =
+      "This is an initial image-based awareness result, not absolute proof of authenticity.";
+  }
+
+  if (overallScore) {
+    overallScore.innerHTML =
+      String(record.overallScore ?? 0) + "<small>/100</small>";
+  }
 
   updateScore("brand", record.brandLogoScore, "Brand appearance");
   updateScore("packaging", record.packagingScore, "Packaging appearance");
   updateScore("label", record.labelScore, "Label appearance");
 
-  document.getElementById("recommendationText").textContent =
-    record.recommendation || "Check the product with the official brand or seller.";
+  if (recommendationText) {
+    recommendationText.textContent =
+      record.recommendation ||
+      "Check the product with the official brand or seller.";
+  }
 
-  if (record.result === "Likely Genuine") {
-    resultIcon.textContent = "✓";
-    resultIcon.style.color = "var(--primary)";
-  } else if ((record.result || "").includes("Suspicious")) {
-    resultIcon.textContent = "!";
-    resultIcon.style.color = "var(--warning)";
-  } else {
-    resultIcon.textContent = "×";
-    resultIcon.style.color = "var(--danger)";
+  if (resultIcon) {
+    if (record.result === "Likely Genuine") {
+      resultIcon.textContent = "✓";
+      resultIcon.style.color = "var(--primary)";
+    } else if ((record.result || "").includes("Suspicious")) {
+      resultIcon.textContent = "!";
+      resultIcon.style.color = "var(--warning)";
+    } else {
+      resultIcon.textContent = "×";
+      resultIcon.style.color = "var(--danger)";
+    }
   }
 }
 
 function updateScore(type, value, description) {
   const score = Number(value) || 0;
-  const scoreElement = document.getElementById(`${type}Score`);
-  const barElement = document.getElementById(`${type}Bar`);
-  const textElement = document.getElementById(`${type}Text`);
+
+  const scoreElement = document.getElementById(type + "Score");
+  const barElement = document.getElementById(type + "Bar");
+  const textElement = document.getElementById(type + "Text");
 
   if (scoreElement) {
-    scoreElement.textContent = `${score}/100`;
+    scoreElement.textContent = String(score) + "/100";
   }
 
   if (barElement) {
-    barElement.style.width = `${Math.max(0, Math.min(100, score))}%`;
+    barElement.style.width =
+      Math.max(0, Math.min(100, score)) + "%";
   }
 
   if (textElement) {
@@ -255,7 +300,7 @@ function updateScore(type, value, description) {
 async function loadHistory() {
   try {
     const response = await fetch(
-      `${API_BASE_URL}/api/verification/history`
+      API_BASE_URL + "/api/verification/history"
     );
 
     if (!response.ok) {
@@ -263,6 +308,7 @@ async function loadHistory() {
     }
 
     const data = await response.json();
+
     const history = Array.isArray(data)
       ? data
       : data.history || data.verifications || [];
@@ -275,7 +321,10 @@ async function loadHistory() {
 
 function renderHistory(records) {
   const historyContainer = document.getElementById("historyList");
-  if (!historyContainer) return;
+
+  if (!historyContainer) {
+    return;
+  }
 
   historyContainer.replaceChildren();
 
@@ -284,7 +333,7 @@ function renderHistory(records) {
     return;
   }
 
-  records.forEach(record => {
+  records.forEach(function (record) {
     const item = document.createElement("div");
     item.className = "history-item";
 
@@ -292,7 +341,8 @@ function renderHistory(records) {
     title.textContent = record.result || "Verification result";
 
     const score = document.createElement("p");
-    score.textContent = `Score: ${record.overallScore ?? "N/A"}/100`;
+    score.textContent =
+      "Score: " + (record.overallScore ?? "N/A") + "/100";
 
     item.append(title, score);
 
@@ -301,11 +351,14 @@ function renderHistory(records) {
       deleteButton.type = "button";
       deleteButton.textContent = "Delete";
 
-      deleteButton.addEventListener("click", async () => {
+      deleteButton.addEventListener("click", async function () {
         try {
           const response = await fetch(
-            `${API_BASE_URL}/api/verification/${encodeURIComponent(record._id)}`,
-            { method: "DELETE" }
+            API_BASE_URL + "/api/verification/" +
+              encodeURIComponent(record._id),
+            {
+              method: "DELETE"
+            }
           );
 
           if (!response.ok) {
