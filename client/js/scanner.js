@@ -380,4 +380,3 @@ function renderHistory(records) {
 }
 
 loadHistory();
-```
