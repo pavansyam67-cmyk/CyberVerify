@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="CyberVerify product authenticity awareness prototype">
+  <title>CyberVerify | Product Authenticity Awareness</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <header class="site-header">
+    <div class="container nav-wrap">
+      <a class="brand" href="#home" aria-label="CyberVerify home">
+        <span class="brand-mark">CV</span>
+        <span>Cyber<span>Verify</span></span>
+      </a>
+
+      <button class="menu-btn" id="menuBtn" aria-label="Open navigation">☰</button>
+
+      <nav id="nav">
+        <a href="#home">Home</a>
+        <a href="#scanner">Scanner</a>
+        <a href="#how">How It Works</a>
+        <a href="#features">Features</a>
+        <a href="#about">About</a>
+        <a class="nav-cta" href="#scanner">Verify Product</a>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <section class="hero" id="home">
+      <div class="container hero-grid">
+        <div class="hero-content">
+          <div class="eyebrow"><span class="pulse"></span> PRODUCT SAFETY AWARENESS</div>
+          <h1>Check <span>Before</span> You Buy.</h1>
+          <p>
+            CyberVerify helps consumers identify potentially suspicious products
+            by checking visible brand logo, packaging design and product label characteristics.
+          </p>
+
+          <div class="hero-actions">
+            <a class="btn btn-primary" href="#scanner">Start Verification <span>→</span></a>
+            <a class="btn btn-secondary" href="#how">How It Works</a>
+          </div>
+
+          <div class="trust-row">
+            <span>✓ Camera support</span>
+            <span>✓ Image upload</span>
+            <span>✓ Awareness-focused</span>
+          </div>
+        </div>
+
+        <div class="hero-visual">
+          <div class="scan-card">
+            <div class="scan-top">
+              <span class="live-dot"></span>
+              <span>CYBERVERIFY SCANNER</span>
+              <span>●</span>
+            </div>
+            <div class="scan-frame">
+              <div class="corner tl"></div>
+              <div class="corner tr"></div>
+              <div class="corner bl"></div>
+              <div class="corner br"></div>
+              <div class="product-placeholder">
+                <div class="package-icon">▣</div>
+                <strong>PRODUCT</strong>
+                <small>Place product inside frame</small>
+              </div>
+              <div class="scan-line"></div>
+            </div>
+            <div class="scan-stats">
+              <div><b>3</b><small>CHECK AREAS</small></div>
+              <div><b>100%</b><small>PROTOTYPE FLOW</small></div>
+              <div><b>SAFE</b><small>FIRST CHECK</small></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="scanner-section section" id="scanner">
+      <div class="container">
+        <div class="section-heading">
+          <div class="eyebrow">01 / PRODUCT SCANNER</div>
+          <h2>Verify a product image</h2>
+          <p>Capture a clear product image or upload one from your device.</p>
+        </div>
+
+        <div class="scanner-layout">
+          <div class="scanner-panel">
+            <div class="panel-header">
+              <div>
+                <span class="panel-label">IMAGE INPUT</span>
+                <h3>Product Scanner</h3>
+              </div>
+              <span class="status-badge" id="cameraStatus">Camera off</span>
+            </div>
+
+            <div class="camera-box">
+              <video id="camera" autoplay playsinline muted></video>
+              <canvas id="canvas"></canvas>
+              <img id="imagePreview" alt="Product preview">
+              <div class="camera-placeholder" id="cameraPlaceholder">
+                <div class="camera-icon">⌁</div>
+                <strong>Camera preview</strong>
+                <span>Start your camera or upload an image</span>
+              </div>
+              <div class="camera-corners"></div>
+            </div>
+
+            <div class="scanner-buttons">
+              <button class="btn btn-primary" id="startCameraBtn">Start Camera</button>
+              <button class="btn btn-secondary" id="captureBtn" disabled>Capture Photo</button>
+              <label class="btn btn-secondary upload-btn">
+                Upload Product Image
+                <input type="file" id="fileInput" accept="image/*">
+              </label>
+            </div>
+
+            <button class="analyze-btn" id="analyzeBtn" disabled>
+              Analyze Product <span>→</span>
+            </button>
+
+            <p class="privacy-note">
+              Your image is used for this prototype verification request. Avoid uploading sensitive personal documents.
+            </p>
+          </div>
+
+          <div class="info-panel">
+            <div class="mini-card">
+              <span class="mini-icon">01</span>
+              <div>
+                <strong>Brand Logo</strong>
+                <p>Logo visibility and basic appearance checks.</p>
+              </div>
+            </div>
+            <div class="mini-card">
+              <span class="mini-icon">02</span>
+              <div>
+                <strong>Packaging / Design</strong>
+                <p>Visible color, layout and packaging consistency.</p>
+              </div>
+            </div>
+            <div class="mini-card">
+              <span class="mini-icon">03</span>
+              <div>
+                <strong>Product Label</strong>
+                <p>Visible label text and layout consistency.</p>
+              </div>
+            </div>
+            <div class="warning-box">
+              <span>⚠</span>
+              <div>
+                <strong>Prototype notice</strong>
+                <p>
+                  The current analysis uses simulated rule-based scoring.
+                  It does not prove that a product is genuine or counterfeit.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="results-section section" id="results">
+      <div class="container">
+        <div class="section-heading">
+          <div class="eyebrow">02 / VERIFICATION RESULT</div>
+          <h2>Verification report</h2>
+        </div>
+
+        <div class="result-card">
+          <div class="result-main">
+            <div class="result-icon" id="resultIcon">✓</div>
+            <div>
+              <span class="result-label">OVERALL RESULT</span>
+              <h3 id="resultTitle">No verification yet</h3>
+              <p id="resultDescription">Capture or upload an image to begin.</p>
+            </div>
+          </div>
+
+          <div class="score-circle" id="overallScore">--<small>/100</small></div>
+
+          <div class="score-grid">
+            <div class="score-item">
+              <div><span>Brand Logo</span><strong id="brandScore">--%</strong></div>
+              <div class="progress"><i id="brandBar"></i></div>
+              <small id="brandText">Waiting for analysis</small>
+            </div>
+            <div class="score-item">
+              <div><span>Packaging / Design</span><strong id="packagingScore">--%</strong></div>
+              <div class="progress"><i id="packagingBar"></i></div>
+              <small id="packagingText">Waiting for analysis</small>
+            </div>
+            <div class="score-item">
+              <div><span>Product Label</span><strong id="labelScore">--%</strong></div>
+              <div class="progress"><i id="labelBar"></i></div>
+              <small id="labelText">Waiting for analysis</small>
+            </div>
+          </div>
+
+          <div class="recommendation">
+            <strong>Recommendation</strong>
+            <p id="recommendationText">
+              For important purchases, verify using official manufacturer or seller information.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="features section" id="features">
+      <div class="container">
+        <div class="section-heading center">
+          <div class="eyebrow">03 / FEATURES</div>
+          <h2>Built for awareness</h2>
+          <p>Simple tools to encourage safer product purchasing decisions.</p>
+        </div>
+
+        <div class="feature-grid">
+          <article class="feature-card">
+            <div class="feature-icon">📷</div>
+            <h3>Camera Verification</h3>
+            <p>Capture the product directly using your device camera.</p>
+          </article>
+          <article class="feature-card">
+            <div class="feature-icon">🔍</div>
+            <h3>Visual Checking</h3>
+            <p>Check important visible product characteristics.</p>
+          </article>
+          <article class="feature-card">
+            <div class="feature-icon">🏷️</div>
+            <h3>Label Checking</h3>
+            <p>Examine product labels and packaging information.</p>
+          </article>
+          <article class="feature-card">
+            <div class="feature-icon">⚠️</div>
+            <h3>Risk Awareness</h3>
+            <p>Warn users when a product appears potentially suspicious.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="how section" id="how">
+      <div class="container">
+        <div class="section-heading">
+          <div class="eyebrow">04 / PROCESS</div>
+          <h2>How CyberVerify works</h2>
+        </div>
+
+        <div class="steps">
+          <div class="step"><span>01</span><h3>Capture</h3><p>Take a clear picture of the product.</p></div>
+          <div class="step"><span>02</span><h3>Analyze</h3><p>The prototype examines visible product characteristics.</p></div>
+          <div class="step"><span>03</span><h3>Compare</h3><p>The prototype compares image information with demonstration rules.</p></div>
+          <div class="step"><span>04</span><h3>Verify</h3><p>A risk/verification result is displayed.</p></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="history section" id="history">
+      <div class="container">
+        <div class="section-heading">
+          <div class="eyebrow">05 / DATABASE</div>
+          <h2>Recent verification history</h2>
+          <p>Saved prototype verification records from MongoDB.</p>
+        </div>
+        <div id="historyList" class="history-list">
+          <div class="empty-history">No verification records yet.</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="about section" id="about">
+      <div class="container about-grid">
+        <div>
+          <div class="eyebrow">06 / ABOUT</div>
+          <h2>Technology for consumer awareness.</h2>
+        </div>
+        <div>
+          <p>
+            CyberVerify is a community-focused cybersecurity and product-awareness
+            project designed to help consumers become more careful when purchasing
+            branded products and to raise awareness about counterfeit products.
+          </p>
+          <p class="muted">
+            This version is a front-end and back-end prototype. It does not provide
+            guaranteed real-world counterfeit detection.
+          </p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="container footer-grid">
+      <div>
+        <a class="brand" href="#home"><span class="brand-mark">CV</span><span>Cyber<span>Verify</span></span></a>
+        <p>Community Product Authenticity Awareness Project.</p>
+      </div>
+      <div class="footer-links">
+        <a href="#about">About</a>
+        <a href="#how">How It Works</a>
+        <a href="#scanner">Scanner</a>
+        <a href="#features">Features</a>
+      </div>
+      <div class="footer-copy">© 2026 CyberVerify.</div>
+    </div>
+  </footer>
+
+  <div class="toast" id="toast"></div>
+  <script src="/js/scanner.js"></script>
+</body>
+</html>
