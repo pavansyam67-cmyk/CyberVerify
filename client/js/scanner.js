@@ -1,3 +1,4 @@
+
 const API_BASE_URL = "https://cyberverify-backend.onrender.com";
 
 const camera = document.getElementById("camera");
@@ -18,16 +19,14 @@ const toast = document.getElementById("toast");
 
 let stream = null;
 let selectedFile = null;
+let imageModel = null;
+let modelPromise = null;
 
 if (menuBtn && nav) {
-  menuBtn.addEventListener("click", function () {
-    nav.classList.toggle("open");
-  });
+  menuBtn.addEventListener("click", () => nav.classList.toggle("open"));
 
-  document.querySelectorAll("nav a").forEach(function (a) {
-    a.addEventListener("click", function () {
-      nav.classList.remove("open");
-    });
+  document.querySelectorAll("nav a").forEach(link => {
+    link.addEventListener("click", () => nav.classList.remove("open"));
   });
 }
 
@@ -39,10 +38,43 @@ function showToast(message) {
 
   toast.textContent = message;
   toast.classList.add("show");
+  setTimeout(() => toast.classList.remove("show"), 3200);
+}
 
-  setTimeout(function () {
-    toast.classList.remove("show");
-  }, 3200);
+// Load MobileNet once.
+async function loadImageModel() {
+  if (imageModel) return imageModel;
+
+  if (typeof mobilenet === "undefined") {
+    throw new Error(
+      "Image recognition did not load. Check your internet connection and index.html."
+    );
+  }
+
+  if (!modelPromise) {
+    modelPromise = mobilenet.load();
+  }
+
+  try {
+    imageModel = await modelPromise;
+    return imageModel;
+  } catch (error) {
+    modelPromise = null;
+    throw error;
+  }
+}
+
+function waitForImage() {
+  if (imagePreview.complete && imagePreview.naturalWidth > 0) {
+    return Promise.resolve();
+  }
+
+  return new Promise((resolve, reject) => {
+    imagePreview.onload = resolve;
+    imagePreview.onerror = () => reject(
+      new Error("Unable to load the selected image.")
+    );
+  });
 }
 
 function setSelectedImage(file) {
@@ -61,22 +93,17 @@ function setSelectedImage(file) {
   cameraStatus.textContent = "Image ready";
 
   if (stream) {
-    stream.getTracks().forEach(function (track) {
-      track.stop();
-    });
+    stream.getTracks().forEach(track => track.stop());
     stream = null;
   }
 
-  if (camera) {
-    camera.srcObject = null;
-  }
-
-  startCameraBtn.textContent = "Start Camera";
-  captureBtn.disabled = true;
+  if (camera) camera.srcObject = null;
+  if (startCameraBtn) startCameraBtn.textContent = "Start Camera";
+  if (captureBtn) captureBtn.disabled = true;
 }
 
 if (fileInput) {
-  fileInput.addEventListener("change", function (event) {
+  fileInput.addEventListener("change", event => {
     const file = event.target.files[0];
 
     if (file) {
@@ -89,15 +116,13 @@ if (fileInput) {
 }
 
 if (startCameraBtn) {
-  startCameraBtn.addEventListener("click", async function () {
+  startCameraBtn.addEventListener("click", async () => {
     try {
       if (stream) {
-        stream.getTracks().forEach(function (track) {
-          track.stop();
-        });
-
+        stream.getTracks().forEach(track => track.stop());
         stream = null;
         camera.srcObject = null;
+
         cameraBox.classList.remove("active");
         startCameraBtn.textContent = "Start Camera";
         captureBtn.disabled = true;
@@ -106,11 +131,7 @@ if (startCameraBtn) {
       }
 
       stream = await navigator.mediaDevices.getUserMedia({
-        video: {
-          facingMode: {
-            ideal: "environment"
-          }
-        },
+        video: { facingMode: { ideal: "environment" } },
         audio: false
       });
 
@@ -132,7 +153,7 @@ if (startCameraBtn) {
 }
 
 if (captureBtn) {
-  captureBtn.addEventListener("click", function () {
+  captureBtn.addEventListener("click", () => {
     if (!stream || !camera.videoWidth) {
       showToast("Start the camera first.");
       return;
@@ -140,64 +161,102 @@ if (captureBtn) {
 
     canvas.width = camera.videoWidth;
     canvas.height = camera.videoHeight;
+    canvas.getContext("2d").drawImage(
+      camera, 0, 0, canvas.width, canvas.height
+    );
 
-    const context = canvas.getContext("2d");
-    context.drawImage(camera, 0, 0, canvas.width, canvas.height);
-
-    canvas.toBlob(function (blob) {
+    canvas.toBlob(blob => {
       if (!blob) {
         showToast("Unable to capture the image.");
         return;
       }
 
-      selectedFile = new File([blob], "camera-product.jpg", {
-        type: "image/jpeg"
-      });
+      setSelectedImage(
+        new File([blob], "camera-product.jpg", { type: "image/jpeg" })
+      );
 
-      imagePreview.src = URL.createObjectURL(blob);
-
-      cameraBox.classList.remove("active");
-      cameraBox.classList.add("has-image");
-
-      analyzeBtn.disabled = false;
-      captureBtn.disabled = true;
       cameraStatus.textContent = "Photo captured";
-
-      if (stream) {
-        stream.getTracks().forEach(function (track) {
-          track.stop();
-        });
-        stream = null;
-      }
-
-      camera.srcObject = null;
-      startCameraBtn.textContent = "Start Camera";
-
-      showToast("Product photo captured.");
+      showToast("Photo captured.");
     }, "image/jpeg", 0.92);
   });
 }
 
+// Broad image-category check, not guaranteed product or face detection.
+async function checkImageCategory() {
+  await waitForImage();
+
+  const model = await loadImageModel();
+  const predictions = await model.classify(imagePreview, 5);
+
+  console.log("Image predictions:", predictions);
+
+  const labels = predictions.map(item => item.className.toLowerCase());
+
+  const productTerms = [
+    "shoe", "sandal", "clog", "sneaker", "watch", "sunglasses",
+    "backpack", "handbag", "wallet", "bottle", "laptop", "computer",
+    "cellular telephone", "mobile phone", "camera", "keyboard",
+    "headphone", "helmet", "umbrella", "suitcase", "jersey", "jean",
+    "shirt", "jacket", "hat", "cap", "book", "remote control",
+    "television", "electric fan", "perfume", "toothbrush", "toy",
+    "sports car", "running shoe", "water bottle"
+  ];
+
+  const nonProductTerms = [
+    "person", "face", "bride", "groom", "boy", "girl", "man",
+    "woman", "child", "baby", "dog", "cat", "bird", "horse",
+    "monkey", "lion", "tiger", "elephant", "snake", "fish",
+    "mountain", "seashore", "beach", "forest", "volcano",
+    "valley", "lakeside", "coral reef", "sunset"
+  ];
+
+  const productMatches = labels.filter(label =>
+    productTerms.some(term => label.includes(term))
+  );
+
+  const nonProductMatches = labels.filter(label =>
+    nonProductTerms.some(term => label.includes(term))
+  );
+
+  // Reject when the strongest prediction is clearly non-product
+  // and none of the top five predictions looks like a product.
+  if (nonProductMatches.length > 0 && productMatches.length === 0) {
+    return {
+      valid: false,
+      message: "Invalid Image — Please upload a product image.",
+      labels
+    };
+  }
+
+  return { valid: true, labels };
+}
+
 if (analyzeBtn) {
-  analyzeBtn.addEventListener("click", async function () {
+  analyzeBtn.addEventListener("click", async () => {
     if (!selectedFile) {
       showToast("Capture or upload a product image first.");
       return;
     }
 
-    const formData = new FormData();
-    formData.append("productImage", selectedFile);
-
     analyzeBtn.disabled = true;
-    analyzeBtn.textContent = "Analyzing...";
+    analyzeBtn.textContent = "Checking Image...";
 
     try {
+      const check = await checkImageCategory();
+
+      if (!check.valid) {
+        showToast(check.message);
+        return;
+      }
+
+      analyzeBtn.textContent = "Analyzing...";
+
+      const formData = new FormData();
+      formData.append("productImage", selectedFile);
+
       const response = await fetch(
-        API_BASE_URL + "/api/verification/analyze",
-        {
-          method: "POST",
-          body: formData
-        }
+        `${API_BASE_URL}/api/verification/analyze`,
+        { method: "POST", body: formData }
       );
 
       const data = await response.json();
@@ -207,16 +266,22 @@ if (analyzeBtn) {
       }
 
       displayResult(data.verification);
+
+      const description = document.getElementById("resultDescription");
+      if (description) {
+        description.textContent =
+          "Image categories: " + check.labels.slice(0, 3).join(", ") +
+          ". This is a prototype awareness check, not proof of authenticity.";
+      }
+
       await loadHistory();
 
       resultsSection.classList.add("show");
-      resultsSection.scrollIntoView({
-        behavior: "smooth"
-      });
+      resultsSection.scrollIntoView({ behavior: "smooth" });
 
-      showToast("Prototype verification completed.");
+      showToast("Prototype image check completed.");
     } catch (error) {
-      console.error("Analysis error:", error);
+      console.error("Image analysis error:", error);
       showToast(error.message || "Unable to analyze image.");
     } finally {
       analyzeBtn.disabled = !selectedFile;
@@ -248,7 +313,7 @@ function displayResult(record) {
 
   if (overallScore) {
     overallScore.innerHTML =
-      String(record.overallScore ?? 0) + "<small>/100</small>";
+      `${record.overallScore ?? 0}<small>/100</small>`;
   }
 
   updateScore("brand", record.brandLogoScore, "Brand appearance");
@@ -277,29 +342,23 @@ function displayResult(record) {
 
 function updateScore(type, value, description) {
   const score = Number(value) || 0;
+  const scoreElement = document.getElementById(`${type}Score`);
+  const barElement = document.getElementById(`${type}Bar`);
+  const textElement = document.getElementById(`${type}Text`);
 
-  const scoreElement = document.getElementById(type + "Score");
-  const barElement = document.getElementById(type + "Bar");
-  const textElement = document.getElementById(type + "Text");
-
-  if (scoreElement) {
-    scoreElement.textContent = String(score) + "/100";
-  }
+  if (scoreElement) scoreElement.textContent = `${score}/100`;
 
   if (barElement) {
-    barElement.style.width =
-      Math.max(0, Math.min(100, score)) + "%";
+    barElement.style.width = `${Math.max(0, Math.min(100, score))}%`;
   }
 
-  if (textElement) {
-    textElement.textContent = description;
-  }
+  if (textElement) textElement.textContent = description;
 }
 
 async function loadHistory() {
   try {
     const response = await fetch(
-      API_BASE_URL + "/api/verification/history"
+      `${API_BASE_URL}/api/verification/history`
     );
 
     if (!response.ok) {
@@ -307,7 +366,6 @@ async function loadHistory() {
     }
 
     const data = await response.json();
-
     const history = Array.isArray(data)
       ? data
       : data.history || data.verifications || [];
@@ -320,10 +378,7 @@ async function loadHistory() {
 
 function renderHistory(records) {
   const historyContainer = document.getElementById("historyList");
-
-  if (!historyContainer) {
-    return;
-  }
+  if (!historyContainer) return;
 
   historyContainer.replaceChildren();
 
@@ -332,7 +387,7 @@ function renderHistory(records) {
     return;
   }
 
-  records.forEach(function (record) {
+  records.forEach(record => {
     const item = document.createElement("div");
     item.className = "history-item";
 
@@ -340,8 +395,7 @@ function renderHistory(records) {
     title.textContent = record.result || "Verification result";
 
     const score = document.createElement("p");
-    score.textContent =
-      "Score: " + (record.overallScore ?? "N/A") + "/100";
+    score.textContent = `Score: ${record.overallScore ?? "N/A"}/100`;
 
     item.append(title, score);
 
@@ -350,14 +404,11 @@ function renderHistory(records) {
       deleteButton.type = "button";
       deleteButton.textContent = "Delete";
 
-      deleteButton.addEventListener("click", async function () {
+      deleteButton.addEventListener("click", async () => {
         try {
           const response = await fetch(
-            API_BASE_URL + "/api/verification/" +
-              encodeURIComponent(record._id),
-            {
-              method: "DELETE"
-            }
+            `${API_BASE_URL}/api/verification/${encodeURIComponent(record._id)}`,
+            { method: "DELETE" }
           );
 
           if (!response.ok) {
