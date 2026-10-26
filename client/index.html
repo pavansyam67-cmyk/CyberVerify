@@ -1,486 +1,399 @@
-
-const API_BASE_URL = "https://cyberverify-backend.onrender.com";
-
-const camera = document.getElementById("camera");
-const canvas = document.getElementById("canvas");
-const imagePreview = document.getElementById("imagePreview");
-const cameraBox = document.querySelector(".camera-box");
-
-const startCameraBtn = document.getElementById("startCameraBtn");
-const captureBtn = document.getElementById("captureBtn");
-const fileInput = document.getElementById("fileInput");
-const analyzeBtn = document.getElementById("analyzeBtn");
-const cameraStatus = document.getElementById("cameraStatus");
-const menuBtn = document.getElementById("menuBtn");
-const nav = document.getElementById("nav");
-
-const resultsSection = document.getElementById("results");
-const toast = document.getElementById("toast");
-
-let stream = null;
-let selectedFile = null;
-let imageModel = null;
-let modelPromise = null;
-
-if (menuBtn && nav) {
-  menuBtn.addEventListener("click", () => nav.classList.toggle("open"));
-
-  document.querySelectorAll("nav a").forEach(link => {
-    link.addEventListener("click", () => nav.classList.remove("open"));
-  });
-}
-
-function showToast(message) {
-  if (!toast) {
-    alert(message);
-    return;
-  }
-
-  toast.textContent = message;
-  toast.classList.add("show");
-
-  setTimeout(() => toast.classList.remove("show"), 3200);
-}
-
-// Load the free MobileNet model once.
-async function loadImageModel() {
-  if (imageModel) return imageModel;
-
-  if (typeof mobilenet === "undefined") {
-    throw new Error(
-      "Image recognition library did not load. Check your internet connection."
-    );
-  }
-
-  if (!modelPromise) {
-    modelPromise = mobilenet.load();
-  }
-
-  try {
-    imageModel = await modelPromise;
-    return imageModel;
-  } catch (error) {
-    modelPromise = null;
-    throw error;
-  }
-}
-
-function setSelectedImage(file) {
-  if (!file || !file.type.startsWith("image/")) {
-    showToast("Please choose a valid image file.");
-    return;
-  }
-
-  selectedFile = file;
-  imagePreview.src = URL.createObjectURL(file);
-
-  cameraBox.classList.remove("active");
-  cameraBox.classList.add("has-image");
-
-  analyzeBtn.disabled = false;
-  cameraStatus.textContent = "Image ready";
-
-  if (stream) {
-    stream.getTracks().forEach(track => track.stop());
-    stream = null;
-  }
-
-  if (camera) camera.srcObject = null;
-
-  if (startCameraBtn) startCameraBtn.textContent = "Start Camera";
-  if (captureBtn) captureBtn.disabled = true;
-}
-
-if (fileInput) {
-  fileInput.addEventListener("change", event => {
-    const file = event.target.files[0];
-
-    if (file) {
-      setSelectedImage(file);
-    } else {
-      selectedFile = null;
-      analyzeBtn.disabled = true;
-    }
-  });
-}
-
-if (startCameraBtn) {
-  startCameraBtn.addEventListener("click", async () => {
-    try {
-      if (stream) {
-        stream.getTracks().forEach(track => track.stop());
-        stream = null;
-        camera.srcObject = null;
-
-        cameraBox.classList.remove("active");
-        startCameraBtn.textContent = "Start Camera";
-        captureBtn.disabled = true;
-        cameraStatus.textContent = "Camera off";
-        return;
-      }
-
-      stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: { ideal: "environment" } },
-        audio: false
-      });
-
-      camera.srcObject = stream;
-      await camera.play();
-
-      cameraBox.classList.add("active");
-      startCameraBtn.textContent = "Stop Camera";
-      captureBtn.disabled = false;
-      cameraStatus.textContent = "Camera active";
-
-      selectedFile = null;
-      analyzeBtn.disabled = true;
-    } catch (error) {
-      console.error("Camera error:", error);
-      showToast("Allow camera permission or upload an image instead.");
-    }
-  });
-}
-
-if (captureBtn) {
-  captureBtn.addEventListener("click", () => {
-    if (!stream || !camera.videoWidth) {
-      showToast("Start the camera first.");
-      return;
-    }
-
-    canvas.width = camera.videoWidth;
-    canvas.height = camera.videoHeight;
-
-    const context = canvas.getContext("2d");
-    context.drawImage(camera, 0, 0, canvas.width, canvas.height);
-
-    canvas.toBlob(blob => {
-      if (!blob) {
-        showToast("Unable to capture the image.");
-        return;
-      }
-
-      setSelectedImage(
-        new File([blob], "camera-product.jpg", { type: "image/jpeg" })
-      );
-
-      cameraStatus.textContent = "Photo captured";
-      showToast("Photo captured.");
-    }, "image/jpeg", 0.92);
-  });
-}
-
-// Basic category check. This is not perfect and may misclassify images.
-async function classifyProductImage() {
-  if (!imagePreview.complete || !imagePreview.naturalWidth) {
-    await new Promise((resolve, reject) => {
-      imagePreview.onload = resolve;
-      imagePreview.onerror = () => reject(
-        new Error("Could not load the selected image.")
-      );
-    });
-  }
-
-  const model = await loadImageModel();
-  const predictions = await model.classify(imagePreview, 5);
-
-  console.log("MobileNet predictions:", predictions);
-
-  const labels = predictions.map(item => item.className.toLowerCase());
-
-  const nonProductTerms = [
-    "person",
-    "face",
-    "bride",
-    "groom",
-    "boy",
-    "girl",
-    "man",
-    "woman",
-    "child",
-    "baby",
-    "dog",
-    "cat",
-    "bird",
-    "horse",
-    "monkey",
-    "lion",
-    "tiger",
-    "elephant",
-    "snake",
-    "fish",
-    "mountain",
-    "seashore",
-    "beach",
-    "forest",
-    "volcano",
-    "valley",
-    "lakeside",
-    "coral reef",
-    "sunset"
-  ];
-
-  const productTerms = [
-    "shoe",
-    "sandal",
-    "clog",
-    "sneaker",
-    "watch",
-    "sunglasses",
-    "jersey",
-    "backpack",
-    "handbag",
-    "wallet",
-    "bottle",
-    "cup",
-    "laptop",
-    "computer",
-    "phone",
-    "cellular telephone",
-    "camera",
-    "keyboard",
-    "mouse",
-    "television",
-    "headphone",
-    "helmet",
-    "perfume",
-    "soap",
-    "toothbrush",
-    "bicycle",
-    "umbrella",
-    "water bottle",
-    "electric fan",
-    "running shoe",
-    "sports car",
-    "jean",
-    "shirt",
-    "jacket",
-    "suit",
-    "tie",
-    "sock",
-    "dress",
-    "hat",
-    "cap",
-    "suitcase",
-    "lotion",
-    "book",
-    "toy",
-    "remote control"
-  ];
-
-  const hasProduct = labels.some(label =>
-    productTerms.some(term => label.includes(term))
-  );
-
-  const hasNonProduct = labels.some(label =>
-    nonProductTerms.some(term => label.includes(term))
-  );
-
-  // Reject only when the model strongly suggests a non-product
-  // and none of the top predictions looks like a product.
-  if (hasNonProduct && !hasProduct) {
-    return {
-      valid: false,
-      labels,
-      message: "Invalid Image — Please upload a product image."
-    };
-  }
-
-  return {
-    valid: true,
-    labels,
-    message: "Image check completed."
-  };
-}
-
-if (analyzeBtn) {
-  analyzeBtn.addEventListener("click", async () => {
-    if (!selectedFile) {
-      showToast("Capture or upload a product image first.");
-      return;
-    }
-
-    analyzeBtn.disabled = true;
-    analyzeBtn.textContent = "Checking Image...";
-
-    try {
-      const imageCheck = await classifyProductImage();
-
-      if (!imageCheck.valid) {
-        showToast(imageCheck.message);
-        return;
-      }
-
-      const formData = new FormData();
-      formData.append("productImage", selectedFile);
-
-      analyzeBtn.textContent = "Analyzing...";
-
-      const response = await fetch(
-        `${API_BASE_URL}/api/verification/analyze`,
-        {
-          method: "POST",
-          body: formData
-        }
-      );
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || "Analysis failed.");
-      }
-
-      displayResult(data.verification);
-
-      // Show the model's broad classification in the result description.
-      const description = document.getElementById("resultDescription");
-      if (description) {
-        description.textContent =
-          "Image categories detected: " +
-          imageCheck.labels.slice(0, 3).join(", ") +
-          ". This is a prototype awareness check, not proof of authenticity.";
-      }
-
-      await loadHistory();
-
-      resultsSection.classList.add("show");
-      resultsSection.scrollIntoView({ behavior: "smooth" });
-
-      showToast("Prototype image check completed.");
-    } catch (error) {
-      console.error("Analysis error:", error);
-      showToast(error.message || "Unable to analyze image.");
-    } finally {
-      analyzeBtn.disabled = !selectedFile;
-      analyzeBtn.innerHTML = 'Analyze Product <span>→</span>';
-    }
-  });
-}
-
-function displayResult(record) {
-  if (!record) {
-    showToast("The server returned no verification result.");
-    return;
-  }
-
-  const resultTitle = document.getElementById("resultTitle");
-  const resultDescription = document.getElementById("resultDescription");
-  const resultIcon = document.getElementById("resultIcon");
-
-  resultTitle.textContent = record.result || "Result unavailable";
-
-  resultDescription.textContent =
-    "This is an initial image-based awareness result, not absolute proof of authenticity.";
-
-  document.getElementById("overallScore").innerHTML =
-    `${record.overallScore ?? 0}<small>/100</small>`;
-
-  updateScore("brand", record.brandLogoScore, "Brand appearance");
-  updateScore("packaging", record.packagingScore, "Packaging appearance");
-  updateScore("label", record.labelScore, "Label appearance");
-
-  document.getElementById("recommendationText").textContent =
-    record.recommendation ||
-    "Check the product with the official brand or seller.";
-
-  if (record.result === "Likely Genuine") {
-    resultIcon.textContent = "✓";
-    resultIcon.style.color = "var(--primary)";
-  } else if ((record.result || "").includes("Suspicious")) {
-    resultIcon.textContent = "!";
-    resultIcon.style.color = "var(--warning)";
-  } else {
-    resultIcon.textContent = "×";
-    resultIcon.style.color = "var(--danger)";
-  }
-}
-
-function updateScore(type, value, description) {
-  const score = Number(value) || 0;
-  const scoreElement = document.getElementById(`${type}Score`);
-  const barElement = document.getElementById(`${type}Bar`);
-  const textElement = document.getElementById(`${type}Text`);
-
-  if (scoreElement) scoreElement.textContent = `${score}/100`;
-  if (barElement) {
-    barElement.style.width = `${Math.max(0, Math.min(100, score))}%`;
-  }
-  if (textElement) textElement.textContent = description;
-}
-
-async function loadHistory() {
-  try {
-    const response = await fetch(
-      `${API_BASE_URL}/api/verification/history`
-    );
-
-    if (!response.ok) {
-      throw new Error("Could not load verification history.");
-    }
-
-    const data = await response.json();
-    const history = Array.isArray(data)
-      ? data
-      : data.history || data.verifications || [];
-
-    renderHistory(history);
-  } catch (error) {
-    console.error("History error:", error);
-  }
-}
-
-function renderHistory(records) {
-  const historyContainer = document.getElementById("historyList");
-  if (!historyContainer) return;
-
-  historyContainer.replaceChildren();
-
-  if (!records.length) {
-    historyContainer.textContent = "No verification history yet.";
-    return;
-  }
-
-  records.forEach(record => {
-    const item = document.createElement("div");
-    item.className = "history-item";
-
-    const title = document.createElement("strong");
-    title.textContent = record.result || "Verification result";
-
-    const score = document.createElement("p");
-    score.textContent = `Score: ${record.overallScore ?? "N/A"}/100`;
-
-    item.append(title, score);
-
-    if (record._id) {
-      const deleteButton = document.createElement("button");
-      deleteButton.type = "button";
-      deleteButton.textContent = "Delete";
-
-      deleteButton.addEventListener("click", async () => {
-        try {
-          const response = await fetch(
-            `${API_BASE_URL}/api/verification/${encodeURIComponent(record._id)}`,
-            { method: "DELETE" }
-          );
-
-          if (!response.ok) {
-            throw new Error("Could not delete this record.");
-          }
-
-          await loadHistory();
-          showToast("History record deleted.");
-        } catch (error) {
-          console.error("Delete error:", error);
-          showToast(error.message || "Unable to delete record.");
-        }
-      });
-
-      item.appendChild(deleteButton);
-    }
-
-    historyContainer.appendChild(item);
-  });
-}
-
-loadHistory();
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="CyberVerify product authenticity awareness prototype">
+  <title>CyberVerify | Product Authenticity Awareness</title>
+
+  <!-- Favicon -->
+  <link rel="icon" href="data:,">
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <!-- Stylesheet: relative path for GitHub Pages -->
+  <link rel="stylesheet" href="./css/style.css">
+</head>
+
+<body>
+  <header class="site-header">
+    <div class="container nav-wrap">
+      <a class="brand" href="#home" aria-label="CyberVerify home">
+        <span class="brand-mark">CV</span>
+        <span>Cyber<span>Verify</span></span>
+      </a>
+
+      <button type="button" class="menu-btn" id="menuBtn" aria-label="Open navigation">☰</button>
+
+      <nav id="nav">
+        <a href="#home">Home</a>
+        <a href="#scanner">Scanner</a>
+        <a href="#how">How It Works</a>
+        <a href="#features">Features</a>
+        <a href="#about">About</a>
+        <a class="nav-cta" href="#scanner">Verify Product</a>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <!-- HOME -->
+    <section class="hero" id="home">
+      <div class="container hero-grid">
+        <div class="hero-content">
+          <div class="eyebrow"><span class="pulse"></span> PRODUCT SAFETY AWARENESS</div>
+
+          <h1>Check <span>Before</span> You Buy.</h1>
+
+          <p>
+            CyberVerify helps consumers identify potentially suspicious products
+            by checking visible brand logo, packaging design and product label characteristics.
+          </p>
+
+          <div class="hero-actions">
+            <a class="btn btn-primary" href="#scanner">Start Verification <span>→</span></a>
+            <a class="btn btn-secondary" href="#how">How It Works</a>
+          </div>
+
+          <div class="trust-row">
+            <span>✓ Camera support</span>
+            <span>✓ Image upload</span>
+            <span>✓ Awareness-focused</span>
+          </div>
+        </div>
+
+        <div class="hero-visual">
+          <div class="scan-card">
+            <div class="scan-top">
+              <span class="live-dot"></span>
+              <span>CYBERVERIFY SCANNER</span>
+              <span>●</span>
+            </div>
+
+            <div class="scan-frame">
+              <div class="corner tl"></div>
+              <div class="corner tr"></div>
+              <div class="corner bl"></div>
+              <div class="corner br"></div>
+
+              <div class="product-placeholder">
+                <div class="package-icon">▣</div>
+                <strong>PRODUCT</strong>
+                <small>Place product inside frame</small>
+              </div>
+
+              <div class="scan-line"></div>
+            </div>
+
+            <div class="scan-stats">
+              <div><b>3</b><small>CHECK AREAS</small></div>
+              <div><b>100%</b><small>PROTOTYPE FLOW</small></div>
+              <div><b>SAFE</b><small>FIRST CHECK</small></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- PRODUCT SCANNER -->
+    <section class="scanner-section section" id="scanner">
+      <div class="container">
+        <div class="section-heading">
+          <div class="eyebrow">01 / PRODUCT SCANNER</div>
+          <h2>Verify a product image</h2>
+          <p>Capture a clear product image or upload one from your device.</p>
+        </div>
+
+        <div class="scanner-layout">
+          <div class="scanner-panel">
+            <div class="panel-header">
+              <div>
+                <span class="panel-label">IMAGE INPUT</span>
+                <h3>Product Scanner</h3>
+              </div>
+              <span class="status-badge" id="cameraStatus">Camera off</span>
+            </div>
+
+            <div class="camera-box">
+              <video id="camera" autoplay playsinline muted></video>
+              <canvas id="canvas"></canvas>
+              <img id="imagePreview" alt="Product preview">
+
+              <div class="camera-placeholder" id="cameraPlaceholder">
+                <div class="camera-icon">⌁</div>
+                <strong>Camera preview</strong>
+                <span>Start your camera or upload an image</span>
+              </div>
+
+              <div class="camera-corners"></div>
+            </div>
+
+            <div class="scanner-buttons">
+              <button type="button" class="btn btn-primary" id="startCameraBtn">
+                Start Camera
+              </button>
+
+              <button type="button" class="btn btn-secondary" id="captureBtn" disabled>
+                Capture Photo
+              </button>
+
+              <label class="btn btn-secondary upload-btn">
+                Upload Product Image
+                <input type="file" id="fileInput" accept="image/*">
+              </label>
+            </div>
+
+            <button type="button" class="analyze-btn" id="analyzeBtn" disabled>
+              Analyze Product <span>→</span>
+            </button>
+
+            <p class="privacy-note">
+              Your image is used for this prototype verification request.
+              Avoid uploading sensitive personal documents.
+            </p>
+          </div>
+
+          <div class="info-panel">
+            <div class="mini-card">
+              <span class="mini-icon">01</span>
+              <div>
+                <strong>Brand Logo</strong>
+                <p>Logo visibility and basic appearance checks.</p>
+              </div>
+            </div>
+
+            <div class="mini-card">
+              <span class="mini-icon">02</span>
+              <div>
+                <strong>Packaging / Design</strong>
+                <p>Visible color, layout and packaging consistency.</p>
+              </div>
+            </div>
+
+            <div class="mini-card">
+              <span class="mini-icon">03</span>
+              <div>
+                <strong>Product Label</strong>
+                <p>Visible label text and layout consistency.</p>
+              </div>
+            </div>
+
+            <div class="warning-box">
+              <span>⚠</span>
+              <div>
+                <strong>Prototype notice</strong>
+                <p>
+                  The current analysis uses simulated rule-based scoring.
+                  It does not prove that a product is genuine or counterfeit.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- RESULTS -->
+    <section class="results-section section" id="results">
+      <div class="container">
+        <div class="section-heading">
+          <div class="eyebrow">02 / VERIFICATION RESULT</div>
+          <h2>Verification report</h2>
+        </div>
+
+        <div class="result-card">
+          <div class="result-main">
+            <div class="result-icon" id="resultIcon">✓</div>
+            <div>
+              <span class="result-label">OVERALL RESULT</span>
+              <h3 id="resultTitle">No verification yet</h3>
+              <p id="resultDescription">Capture or upload an image to begin.</p>
+            </div>
+          </div>
+
+          <div class="score-circle" id="overallScore">--<small>/100</small></div>
+
+          <div class="score-grid">
+            <div class="score-item">
+              <div>
+                <span>Brand Logo</span>
+                <strong id="brandScore">--%</strong>
+              </div>
+              <div class="progress"><i id="brandBar"></i></div>
+              <small id="brandText">Waiting for analysis</small>
+            </div>
+
+            <div class="score-item">
+              <div>
+                <span>Packaging / Design</span>
+                <strong id="packagingScore">--%</strong>
+              </div>
+              <div class="progress"><i id="packagingBar"></i></div>
+              <small id="packagingText">Waiting for analysis</small>
+            </div>
+
+            <div class="score-item">
+              <div>
+                <span>Product Label</span>
+                <strong id="labelScore">--%</strong>
+              </div>
+              <div class="progress"><i id="labelBar"></i></div>
+              <small id="labelText">Waiting for analysis</small>
+            </div>
+          </div>
+
+          <div class="recommendation">
+            <strong>Recommendation</strong>
+            <p id="recommendationText">
+              For important purchases, verify using official manufacturer or seller information.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- FEATURES -->
+    <section class="features section" id="features">
+      <div class="container">
+        <div class="section-heading center">
+          <div class="eyebrow">03 / FEATURES</div>
+          <h2>Built for awareness</h2>
+          <p>Simple tools to encourage safer product purchasing decisions.</p>
+        </div>
+
+        <div class="feature-grid">
+          <article class="feature-card">
+            <div class="feature-icon">📷</div>
+            <h3>Camera Verification</h3>
+            <p>Capture the product directly using your device camera.</p>
+          </article>
+
+          <article class="feature-card">
+            <div class="feature-icon">🔍</div>
+            <h3>Visual Checking</h3>
+            <p>Check important visible product characteristics.</p>
+          </article>
+
+          <article class="feature-card">
+            <div class="feature-icon">🏷️</div>
+            <h3>Label Checking</h3>
+            <p>Examine product labels and packaging information.</p>
+          </article>
+
+          <article class="feature-card">
+            <div class="feature-icon">⚠️</div>
+            <h3>Risk Awareness</h3>
+            <p>Warn users when a product appears potentially suspicious.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <!-- HOW IT WORKS -->
+    <section class="how section" id="how">
+      <div class="container">
+        <div class="section-heading">
+          <div class="eyebrow">04 / PROCESS</div>
+          <h2>How CyberVerify works</h2>
+        </div>
+
+        <div class="steps">
+          <div class="step">
+            <span>01</span>
+            <h3>Capture</h3>
+            <p>Take a clear picture of the product.</p>
+          </div>
+
+          <div class="step">
+            <span>02</span>
+            <h3>Analyze</h3>
+            <p>The prototype examines visible product characteristics.</p>
+          </div>
+
+          <div class="step">
+            <span>03</span>
+            <h3>Compare</h3>
+            <p>The prototype compares image information with demonstration rules.</p>
+          </div>
+
+          <div class="step">
+            <span>04</span>
+            <h3>Verify</h3>
+            <p>A risk/verification result is displayed.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- HISTORY -->
+    <section class="history section" id="history">
+      <div class="container">
+        <div class="section-heading">
+          <div class="eyebrow">05 / DATABASE</div>
+          <h2>Recent verification history</h2>
+          <p>Saved prototype verification records from MongoDB.</p>
+        </div>
+
+        <div id="historyList" class="history-list">
+          <div class="empty-history">No verification records yet.</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ABOUT -->
+    <section class="about section" id="about">
+      <div class="container about-grid">
+        <div>
+          <div class="eyebrow">06 / ABOUT</div>
+          <h2>Technology for consumer awareness.</h2>
+        </div>
+
+        <div>
+          <p>
+            CyberVerify is a community-focused cybersecurity and product-awareness
+            project designed to help consumers become more careful when purchasing
+            branded products and to raise awareness about counterfeit products.
+          </p>
+
+          <p class="muted">
+            This version is a front-end and back-end prototype. It does not provide
+            guaranteed real-world counterfeit detection.
+          </p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- FOOTER -->
+  <footer>
+    <div class="container footer-grid">
+      <div>
+        <a class="brand" href="#home">
+          <span class="brand-mark">CV</span>
+          <span>Cyber<span>Verify</span></span>
+        </a>
+        <p>Community Product Authenticity Awareness Project.</p>
+      </div>
+
+      <div class="footer-links">
+        <a href="#about">About</a>
+        <a href="#how">How It Works</a>
+        <a href="#scanner">Scanner</a>
+        <a href="#features">Features</a>
+      </div>
+
+      <div class="footer-copy">© 2026 CyberVerify.</div>
+    </div>
+  </footer>
+
+  <div class="toast" id="toast"></div>
+
+  <!-- JavaScript: relative path for GitHub Pages -->
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.22.0/dist/tf.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/mobilenet@2.1.1/dist/mobilenet.min.js"></script>
+<script src="./js/scanner.js"></script>
+</body>
+</html>
