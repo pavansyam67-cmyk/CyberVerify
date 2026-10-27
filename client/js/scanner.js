@@ -19,17 +19,29 @@ const toast = document.getElementById("toast");
 
 let stream = null;
 let selectedFile = null;
+
+// Face detection model
+let faceModel = null;
+let faceModelPromise = null;
+
+// MobileNet image recognition model
 let imageModel = null;
 let modelPromise = null;
 
+// Mobile navigation
 if (menuBtn && nav) {
-  menuBtn.addEventListener("click", () => nav.classList.toggle("open"));
+  menuBtn.addEventListener("click", () => {
+    nav.classList.toggle("open");
+  });
 
   document.querySelectorAll("nav a").forEach(link => {
-    link.addEventListener("click", () => nav.classList.remove("open"));
+    link.addEventListener("click", () => {
+      nav.classList.remove("open");
+    });
   });
 }
 
+// Toast notification
 function showToast(message) {
   if (!toast) {
     alert(message);
@@ -38,10 +50,13 @@ function showToast(message) {
 
   toast.textContent = message;
   toast.classList.add("show");
-  setTimeout(() => toast.classList.remove("show"), 3200);
+
+  setTimeout(() => {
+    toast.classList.remove("show");
+  }, 3200);
 }
 
-// Load MobileNet once.
+// Load MobileNet once
 async function loadImageModel() {
   if (imageModel) return imageModel;
 
@@ -64,19 +79,25 @@ async function loadImageModel() {
   }
 }
 
+// Wait for selected image to load
 function waitForImage() {
-  if (imagePreview.complete && imagePreview.naturalWidth > 0) {
+  if (
+    imagePreview.complete &&
+    imagePreview.naturalWidth > 0
+  ) {
     return Promise.resolve();
   }
 
   return new Promise((resolve, reject) => {
     imagePreview.onload = resolve;
-    imagePreview.onerror = () => reject(
-      new Error("Unable to load the selected image.")
-    );
+
+    imagePreview.onerror = () => {
+      reject(new Error("Unable to load the selected image."));
+    };
   });
 }
 
+// Select an image
 function setSelectedImage(file) {
   if (!file || !file.type.startsWith("image/")) {
     showToast("Please choose a valid image file.");
@@ -97,11 +118,20 @@ function setSelectedImage(file) {
     stream = null;
   }
 
-  if (camera) camera.srcObject = null;
-  if (startCameraBtn) startCameraBtn.textContent = "Start Camera";
-  if (captureBtn) captureBtn.disabled = true;
+  if (camera) {
+    camera.srcObject = null;
+  }
+
+  if (startCameraBtn) {
+    startCameraBtn.textContent = "Start Camera";
+  }
+
+  if (captureBtn) {
+    captureBtn.disabled = true;
+  }
 }
 
+// Upload image
 if (fileInput) {
   fileInput.addEventListener("change", event => {
     const file = event.target.files[0];
@@ -115,15 +145,17 @@ if (fileInput) {
   });
 }
 
+// Start or stop camera
 if (startCameraBtn) {
   startCameraBtn.addEventListener("click", async () => {
     try {
       if (stream) {
         stream.getTracks().forEach(track => track.stop());
         stream = null;
-        camera.srcObject = null;
 
+        camera.srcObject = null;
         cameraBox.classList.remove("active");
+
         startCameraBtn.textContent = "Start Camera";
         captureBtn.disabled = true;
         cameraStatus.textContent = "Camera off";
@@ -131,7 +163,9 @@ if (startCameraBtn) {
       }
 
       stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: { ideal: "environment" } },
+        video: {
+          facingMode: { ideal: "environment" }
+        },
         audio: false
       });
 
@@ -147,11 +181,14 @@ if (startCameraBtn) {
       analyzeBtn.disabled = true;
     } catch (error) {
       console.error("Camera error:", error);
-      showToast("Allow camera permission or upload an image instead.");
+      showToast(
+        "Allow camera permission or upload an image instead."
+      );
     }
   });
 }
 
+// Capture image from camera
 if (captureBtn) {
   captureBtn.addEventListener("click", () => {
     if (!stream || !camera.videoWidth) {
@@ -161,8 +198,13 @@ if (captureBtn) {
 
     canvas.width = camera.videoWidth;
     canvas.height = camera.videoHeight;
+
     canvas.getContext("2d").drawImage(
-      camera, 0, 0, canvas.width, canvas.height
+      camera,
+      0,
+      0,
+      canvas.width,
+      canvas.height
     );
 
     canvas.toBlob(blob => {
@@ -172,7 +214,11 @@ if (captureBtn) {
       }
 
       setSelectedImage(
-        new File([blob], "camera-product.jpg", { type: "image/jpeg" })
+        new File(
+          [blob],
+          "camera-product.jpg",
+          { type: "image/jpeg" }
+        )
       );
 
       cameraStatus.textContent = "Photo captured";
@@ -181,56 +227,98 @@ if (captureBtn) {
   });
 }
 
-// Broad image-category check, not guaranteed product or face detection.
+// Check whether the image contains a face
+// or resembles a supported product category.
 async function checkImageCategory() {
   await waitForImage();
 
+  // Load BlazeFace
+  if (typeof blazeface === "undefined") {
+    throw new Error(
+      "Face detection did not load. Refresh the page and try again."
+    );
+  }
+
+  if (!faceModel) {
+    if (!faceModelPromise) {
+      faceModelPromise = blazeface.load();
+    }
+
+    try {
+      faceModel = await faceModelPromise;
+    } catch (error) {
+      faceModelPromise = null;
+      throw error;
+    }
+  }
+
+  // Reject detected faces
+  const faces = await faceModel.estimateFaces(
+    imagePreview,
+    true
+  );
+
+  console.log("Faces detected:", faces.length);
+  console.log("Face detection result:", faces);
+
+  if (faces.length > 0) {
+    console.log("Face detected — rejecting image");
+
+    return {
+      valid: false,
+      message:
+        "Invalid Image — Please Upload a Product Image.",
+      labels: ["human face detected"]
+    };
+  }
+
+  // Check whether the image resembles a product
   const model = await loadImageModel();
-  const predictions = await model.classify(imagePreview, 5);
+  const predictions = await model.classify(
+    imagePreview,
+    5
+  );
 
   console.log("Image predictions:", predictions);
 
-  const labels = predictions.map(item => item.className.toLowerCase());
+  const labels = predictions.map(item =>
+    item.className.toLowerCase()
+  );
 
   const productTerms = [
-    "shoe", "sandal", "clog", "sneaker", "watch", "sunglasses",
-    "backpack", "handbag", "wallet", "bottle", "laptop", "computer",
-    "cellular telephone", "mobile phone", "camera", "keyboard",
-    "headphone", "helmet", "umbrella", "suitcase", "jersey", "jean",
-    "shirt", "jacket", "hat", "cap", "book", "remote control",
-    "television", "electric fan", "perfume", "toothbrush", "toy",
-    "sports car", "running shoe", "water bottle"
+    "shoe", "sandal", "clog", "sneaker",
+    "watch", "sunglasses", "backpack",
+    "handbag", "wallet", "bottle",
+    "laptop", "computer", "cellular telephone",
+    "mobile phone", "camera", "keyboard",
+    "headphone", "helmet", "umbrella",
+    "suitcase", "jersey", "jean", "shirt",
+    "jacket", "hat", "cap", "book",
+    "remote control", "television",
+    "electric fan", "perfume", "toothbrush",
+    "toy", "running shoe", "water bottle"
   ];
 
-  const nonProductTerms = [
-    "person", "face", "bride", "groom", "boy", "girl", "man",
-    "woman", "child", "baby", "dog", "cat", "bird", "horse",
-    "monkey", "lion", "tiger", "elephant", "snake", "fish",
-    "mountain", "seashore", "beach", "forest", "volcano",
-    "valley", "lakeside", "coral reef", "sunset"
-  ];
-
-  const productMatches = labels.filter(label =>
+  const hasProduct = labels.some(label =>
     productTerms.some(term => label.includes(term))
   );
 
-  const nonProductMatches = labels.filter(label =>
-    nonProductTerms.some(term => label.includes(term))
-  );
-
-  // Reject when the strongest prediction is clearly non-product
-  // and none of the top five predictions looks like a product.
-  if (nonProductMatches.length > 0 && productMatches.length === 0) {
+  if (!hasProduct) {
     return {
       valid: false,
-      message: "Invalid Image — Please upload a product image.",
+      message:
+        "Product not detected. Please upload a clear product image.",
       labels
     };
   }
 
-  return { valid: true, labels };
+  return {
+    valid: true,
+    labels
+  };
 }
 
+// Analyze product image
 if (analyzeBtn) {
   analyzeBtn.addEventListener("click", async () => {
     if (!selectedFile) {
@@ -244,11 +332,29 @@ if (analyzeBtn) {
     try {
       const check = await checkImageCategory();
 
+      // Display rejected image result
       if (!check.valid) {
+        displayResult({
+          result: "Invalid Image — Please Upload a Product Image",
+          overallScore: 0,
+          brandLogoScore: 0,
+          packagingScore: 0,
+          labelScore: 0,
+          recommendation: check.message
+        });
+
+        if (resultsSection) {
+          resultsSection.classList.add("show");
+          resultsSection.scrollIntoView({
+            behavior: "smooth"
+          });
+        }
+
         showToast(check.message);
         return;
       }
 
+      // Send accepted image to backend
       analyzeBtn.textContent = "Analyzing...";
 
       const formData = new FormData();
@@ -256,54 +362,83 @@ if (analyzeBtn) {
 
       const response = await fetch(
         `${API_BASE_URL}/api/verification/analyze`,
-        { method: "POST", body: formData }
+        {
+          method: "POST",
+          body: formData
+        }
       );
 
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.message || "Analysis failed.");
+        throw new Error(
+          data.message || "Analysis failed."
+        );
       }
 
       displayResult(data.verification);
 
-      const description = document.getElementById("resultDescription");
+      const description =
+        document.getElementById("resultDescription");
+
       if (description) {
         description.textContent =
-          "Image categories: " + check.labels.slice(0, 3).join(", ") +
+          "Image categories: " +
+          check.labels.slice(0, 3).join(", ") +
           ". This is a prototype awareness check, not proof of authenticity.";
       }
 
       await loadHistory();
 
-      resultsSection.classList.add("show");
-      resultsSection.scrollIntoView({ behavior: "smooth" });
+      if (resultsSection) {
+        resultsSection.classList.add("show");
+        resultsSection.scrollIntoView({
+          behavior: "smooth"
+        });
+      }
 
       showToast("Prototype image check completed.");
     } catch (error) {
       console.error("Image analysis error:", error);
-      showToast(error.message || "Unable to analyze image.");
+
+      showToast(
+        error.message || "Unable to analyze image."
+      );
     } finally {
       analyzeBtn.disabled = !selectedFile;
-      analyzeBtn.innerHTML = 'Analyze Product <span>→</span>';
+      analyzeBtn.innerHTML =
+        'Analyze Product <span>→</span>';
     }
   });
 }
 
+// Display verification result
 function displayResult(record) {
   if (!record) {
-    showToast("The server returned no verification result.");
+    showToast(
+      "The server returned no verification result."
+    );
     return;
   }
 
-  const resultTitle = document.getElementById("resultTitle");
-  const resultDescription = document.getElementById("resultDescription");
-  const resultIcon = document.getElementById("resultIcon");
-  const overallScore = document.getElementById("overallScore");
-  const recommendationText = document.getElementById("recommendationText");
+  const resultTitle =
+    document.getElementById("resultTitle");
+
+  const resultDescription =
+    document.getElementById("resultDescription");
+
+  const resultIcon =
+    document.getElementById("resultIcon");
+
+  const overallScore =
+    document.getElementById("overallScore");
+
+  const recommendationText =
+    document.getElementById("recommendationText");
 
   if (resultTitle) {
-    resultTitle.textContent = record.result || "Result unavailable";
+    resultTitle.textContent =
+      record.result || "Result unavailable";
   }
 
   if (resultDescription) {
@@ -316,9 +451,23 @@ function displayResult(record) {
       `${record.overallScore ?? 0}<small>/100</small>`;
   }
 
-  updateScore("brand", record.brandLogoScore, "Brand appearance");
-  updateScore("packaging", record.packagingScore, "Packaging appearance");
-  updateScore("label", record.labelScore, "Label appearance");
+  updateScore(
+    "brand",
+    record.brandLogoScore,
+    "Brand appearance"
+  );
+
+  updateScore(
+    "packaging",
+    record.packagingScore,
+    "Packaging appearance"
+  );
+
+  updateScore(
+    "label",
+    record.labelScore,
+    "Label appearance"
+  );
 
   if (recommendationText) {
     recommendationText.textContent =
@@ -327,10 +476,14 @@ function displayResult(record) {
   }
 
   if (resultIcon) {
-    if (record.result === "Likely Genuine") {
+    if (
+      record.result === "Likely Genuine"
+    ) {
       resultIcon.textContent = "✓";
       resultIcon.style.color = "var(--primary)";
-    } else if ((record.result || "").includes("Suspicious")) {
+    } else if (
+      (record.result || "").includes("Suspicious")
+    ) {
       resultIcon.textContent = "!";
       resultIcon.style.color = "var(--warning)";
     } else {
@@ -340,21 +493,34 @@ function displayResult(record) {
   }
 }
 
+// Update individual scores
 function updateScore(type, value, description) {
   const score = Number(value) || 0;
-  const scoreElement = document.getElementById(`${type}Score`);
-  const barElement = document.getElementById(`${type}Bar`);
-  const textElement = document.getElementById(`${type}Text`);
 
-  if (scoreElement) scoreElement.textContent = `${score}/100`;
+  const scoreElement =
+    document.getElementById(`${type}Score`);
 
-  if (barElement) {
-    barElement.style.width = `${Math.max(0, Math.min(100, score))}%`;
+  const barElement =
+    document.getElementById(`${type}Bar`);
+
+  const textElement =
+    document.getElementById(`${type}Text`);
+
+  if (scoreElement) {
+    scoreElement.textContent = `${score}/100`;
   }
 
-  if (textElement) textElement.textContent = description;
+  if (barElement) {
+    barElement.style.width =
+      `${Math.max(0, Math.min(100, score))}%`;
+  }
+
+  if (textElement) {
+    textElement.textContent = description;
+  }
 }
 
+// Load verification history
 async function loadHistory() {
   try {
     const response = await fetch(
@@ -362,10 +528,13 @@ async function loadHistory() {
     );
 
     if (!response.ok) {
-      throw new Error("Could not load verification history.");
+      throw new Error(
+        "Could not load verification history."
+      );
     }
 
     const data = await response.json();
+
     const history = Array.isArray(data)
       ? data
       : data.history || data.verifications || [];
@@ -376,14 +545,18 @@ async function loadHistory() {
   }
 }
 
+// Display history
 function renderHistory(records) {
-  const historyContainer = document.getElementById("historyList");
+  const historyContainer =
+    document.getElementById("historyList");
+
   if (!historyContainer) return;
 
   historyContainer.replaceChildren();
 
   if (!records.length) {
-    historyContainer.textContent = "No verification history yet.";
+    historyContainer.textContent =
+      "No verification history yet.";
     return;
   }
 
@@ -392,36 +565,49 @@ function renderHistory(records) {
     item.className = "history-item";
 
     const title = document.createElement("strong");
-    title.textContent = record.result || "Verification result";
+    title.textContent =
+      record.result || "Verification result";
 
     const score = document.createElement("p");
-    score.textContent = `Score: ${record.overallScore ?? "N/A"}/100`;
+    score.textContent =
+      `Score: ${record.overallScore ?? "N/A"}/100`;
 
     item.append(title, score);
 
     if (record._id) {
-      const deleteButton = document.createElement("button");
+      const deleteButton =
+        document.createElement("button");
+
       deleteButton.type = "button";
       deleteButton.textContent = "Delete";
 
-      deleteButton.addEventListener("click", async () => {
-        try {
-          const response = await fetch(
-            `${API_BASE_URL}/api/verification/${encodeURIComponent(record._id)}`,
-            { method: "DELETE" }
-          );
+      deleteButton.addEventListener(
+        "click",
+        async () => {
+          try {
+            const response = await fetch(
+              `${API_BASE_URL}/api/verification/${encodeURIComponent(record._id)}`,
+              { method: "DELETE" }
+            );
 
-          if (!response.ok) {
-            throw new Error("Could not delete this record.");
+            if (!response.ok) {
+              throw new Error(
+                "Could not delete this record."
+              );
+            }
+
+            await loadHistory();
+            showToast("History record deleted.");
+          } catch (error) {
+            console.error("Delete error:", error);
+
+            showToast(
+              error.message ||
+              "Unable to delete record."
+            );
           }
-
-          await loadHistory();
-          showToast("History record deleted.");
-        } catch (error) {
-          console.error("Delete error:", error);
-          showToast(error.message || "Unable to delete record.");
         }
-      });
+      );
 
       item.appendChild(deleteButton);
     }
@@ -430,4 +616,5 @@ function renderHistory(records) {
   });
 }
 
+// Load history when the page opens
 loadHistory();
